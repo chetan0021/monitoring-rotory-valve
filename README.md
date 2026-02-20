@@ -38,14 +38,14 @@ This project implements a **5th-order closed-loop control system** for precise p
 
 ```mermaid
 graph LR
-    A[Setpoint<br/>500 bar] --> B[PID Controller<br/>Kp, Ki, Kd]
-    B --> C[DC Motor<br/>R-L Circuit]
-    C --> D[Gearbox<br/>40:1, η=0.85]
-    D --> E[Rotary Valve<br/>100 kg]
-    E --> F[Pressure Process<br/>τ = 0.5s]
-    F --> G[Pressure Sensor<br/>0.01 V/bar]
+    A[Setpoint 500 bar] --> B[PID Controller Kp, Ki, Kd]
+    B --> C[DC Motor R-L Circuit]
+    C --> D[Gearbox 40:1, n=0.85]
+    D --> E[Rotary Valve 100 kg]
+    E --> F[Pressure Process t = 0.5s]
+    F --> G[Pressure Sensor 0.01 V/bar]
     G --> B
-    F --> H[Output<br/>Pressure]
+    F --> H[Output Pressure]
     
     style A fill:#e1f5ff
     style B fill:#fff4e1
@@ -477,15 +477,15 @@ flowchart LR
 
 ```mermaid
 graph TD
-    A[Initial State<br/>x = [0, 0, 0, 0, 0]] --> B[Compute Dynamics<br/>ẋ = A·x + B·u]
-    B --> C[Numerical Integration<br/>scipy.odeint]
-    C --> D[Update State<br/>x_new]
-    D --> E[Extract Outputs<br/>pressure, valve angle, current]
-    E --> F[Apply Saturation<br/>Physical limits]
+    A[Initial State x = 0, 0, 0, 0, 0] --> B[Compute Dynamics dx/dt = Ax + Bu]
+    B --> C[Numerical Integration scipy.odeint]
+    C --> D[Update State x_new]
+    D --> E[Extract Outputs pressure, valve angle, current]
+    E --> F[Apply Saturation Physical limits]
     F --> G[JSON Serialization]
     G --> H[Output to stdout]
     H --> I{Check stdin}
-    I -->|Gain Update| J[Rebuild Closed-Loop<br/>Update A matrix]
+    I -->|Gain Update| J[Rebuild Closed-Loop Update A matrix]
     I -->|No Update| B
     J --> B
     
