@@ -49,3 +49,22 @@ htmlcov/
 # Temporary files
 *.log
 *.tmp
+
+# Qt build output
+gui/build/
+gui/**/*.o
+gui/**/*.obj
+gui/**/*.exe
+gui/**/*.app
+gui/**/*.dll
+gui/**/*.so
+gui/**/*.dylib
+gui/**/moc_*
+gui/**/ui_*
+gui/**/qrc_*
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.user
+*.user.*

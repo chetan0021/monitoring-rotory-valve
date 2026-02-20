@@ -1,29 +1,17 @@
-/*
- * Communication Client Implementation
- * 
- * Implements ZeroMQ client for non-blocking communication with Python simulation.
- * 
- * References:
- * - docs/numerical_state_space_and_simulation_specification.md (Section 8)
- */
-
 #include "communication_client.h"
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QDebug>
 
 CommunicationClient::CommunicationClient(QObject *parent)
-    : QObject(parent),
-      context(nullptr),
-      subSocket(nullptr),
-      reqSocket(nullptr),
-      receiveThread(nullptr),
-      running(false),
-      serverAddress("tcp://localhost"),
-      subPort(5555),
-      reqPort(5556)
+    : QObject(parent)
+    , m_pythonProcess(new QProcess(this))
 {
-    // Initialize latest state
-    latestState = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    // Connect process signals
+    connect(m_pythonProcess, &QProcess::readyReadStandardOutput,
+            this, &CommunicationClient::onReadyRead);
+    connect(m_pythonProcess, &QProcess::errorOccurred,
+            this, &CommunicationClient::onProcessError);
 }
 
 CommunicationClient::~CommunicationClient()
@@ -31,61 +19,139 @@ CommunicationClient::~CommunicationClient()
     stop();
 }
 
-void CommunicationClient::start()
+void CommunicationClient::start(const QString& scriptPath)
 {
-    // TODO: Initialize ZeroMQ context and sockets
-    // TODO: Connect to server
-    // TODO: Start receive thread
+    if (m_pythonProcess->state() == QProcess::Running) {
+        qWarning() << "Process already running";
+        return;
+    }
+
+    // Try both "python" and "python3" for cross-platform compatibility
+    QStringList pythonCandidates = {"python", "python3"};
+    bool started = false;
+    
+    for (const QString& pyExec : pythonCandidates) {
+        QStringList arguments;
+        arguments << scriptPath;
+        
+        m_pythonProcess->start(pyExec, arguments);
+        
+        if (m_pythonProcess->waitForStarted(2000)) {
+            qInfo() << "Python simulation started successfully with" << pyExec;
+            started = true;
+            break;
+        }
+        
+        // Kill failed attempt before trying next
+        m_pythonProcess->kill();
+        m_pythonProcess->waitForFinished(500);
+    }
+    
+    if (!started) {
+        QString error = QString("Failed to start Python simulation.\n"
+                               "Please ensure Python 3.9+ is installed and in your system PATH.\n"
+                               "Error: %1").arg(m_pythonProcess->errorString());
+        emit connectionError(error);
+        qCritical() << error;
+    }
 }
 
 void CommunicationClient::stop()
 {
-    // TODO: Stop receive thread
-    // TODO: Disconnect from server
-    // TODO: Cleanup ZeroMQ resources
+    if (m_pythonProcess->state() == QProcess::Running) {
+        m_pythonProcess->kill();
+        m_pythonProcess->waitForFinished(3000);
+        qInfo() << "Python simulation stopped";
+    }
 }
 
-SystemState CommunicationClient::getLatestState() const
+void CommunicationClient::sendGains(double Kp, double Ki, double Kd)
 {
-    return latestState;
+    if (m_pythonProcess->state() != QProcess::Running) {
+        qWarning() << "Cannot send gains: process not running";
+        return;
+    }
+
+    // Build JSON object
+    QJsonObject json;
+    json["Kp"] = Kp;
+    json["Ki"] = Ki;
+    json["Kd"] = Kd;
+
+    // Serialize to compact JSON
+    QJsonDocument doc(json);
+    QByteArray data = doc.toJson(QJsonDocument::Compact);
+    data.append('\n');
+
+    // Write to Python stdin
+    m_pythonProcess->write(data);
+    qDebug() << "Sent gains:" << data;
 }
 
-void CommunicationClient::sendSetpointCommand(double setpoint)
+void CommunicationClient::onReadyRead()
 {
-    // TODO: Create command message JSON
-    // TODO: Send via REQ socket
-    // TODO: Wait for response
+    // Read all available lines from stdout
+    while (m_pythonProcess->canReadLine()) {
+        QByteArray line = m_pythonProcess->readLine().trimmed();
+        
+        if (line.isEmpty()) {
+            continue;
+        }
+
+        // Parse JSON
+        QJsonDocument doc = QJsonDocument::fromJson(line);
+        
+        if (doc.isNull() || !doc.isObject()) {
+            qWarning() << "Invalid JSON received:" << line;
+            continue;
+        }
+
+        QJsonObject obj = doc.object();
+
+        // Extract fields
+        if (obj.contains("pressure") && obj.contains("valve_angle") &&
+            obj.contains("motor_current") && obj.contains("setpoint") &&
+            obj.contains("timestamp")) {
+            
+            double pressure = obj["pressure"].toDouble();
+            double valveAngle = obj["valve_angle"].toDouble();
+            double motorCurrent = obj["motor_current"].toDouble();
+            double setpoint = obj["setpoint"].toDouble();
+            double timestamp = obj["timestamp"].toDouble();
+
+            // Emit signal with data
+            emit dataUpdated(pressure, valveAngle, motorCurrent, setpoint, timestamp);
+        } else {
+            qWarning() << "JSON missing required fields:" << line;
+        }
+    }
 }
 
-void CommunicationClient::sendStartCommand()
+void CommunicationClient::onProcessError(QProcess::ProcessError error)
 {
-    // TODO: Send start command
-}
+    QString errorMsg;
+    
+    switch (error) {
+        case QProcess::FailedToStart:
+            errorMsg = "Python not found. Please install Python 3.9+ and ensure it is in your system PATH.";
+            break;
+        case QProcess::Crashed:
+            errorMsg = "Python process crashed";
+            break;
+        case QProcess::Timedout:
+            errorMsg = "Python process timed out";
+            break;
+        case QProcess::WriteError:
+            errorMsg = "Write error to Python process";
+            break;
+        case QProcess::ReadError:
+            errorMsg = "Read error from Python process";
+            break;
+        default:
+            errorMsg = "Unknown process error";
+            break;
+    }
 
-void CommunicationClient::sendStopCommand()
-{
-    // TODO: Send stop command
-}
-
-void CommunicationClient::sendResetCommand()
-{
-    // TODO: Send reset command
-}
-
-void CommunicationClient::receiveData()
-{
-    // TODO: Receive state updates from SUB socket
-    // TODO: Parse JSON
-    // TODO: Update latestState
-    // TODO: Emit stateReceived signal
-}
-
-void CommunicationClient::connectToServer()
-{
-    // TODO: Connect ZeroMQ sockets to server
-}
-
-void CommunicationClient::disconnectFromServer()
-{
-    // TODO: Disconnect ZeroMQ sockets
+    emit connectionError(errorMsg);
+    qCritical() << "Process error:" << errorMsg;
 }

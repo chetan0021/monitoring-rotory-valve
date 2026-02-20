@@ -1,35 +1,16 @@
-/*
- * Communication Client Header
- * 
- * ZeroMQ client for receiving system state and sending commands.
- * 
- * References:
- * - docs/numerical_state_space_and_simulation_specification.md (Section 8)
- */
-
 #ifndef COMMUNICATION_CLIENT_H
 #define COMMUNICATION_CLIENT_H
 
 #include <QObject>
-#include <QThread>
+#include <QProcess>
 #include <QString>
 
-// Forward declarations for ZeroMQ
-namespace zmq {
-    class context_t;
-    class socket_t;
-}
-
-struct SystemState {
-    double timestamp;
-    double pressure;
-    double valve_angle;
-    double motor_current;
-    double motor_velocity;
-    double control_voltage;
-    double setpoint;
-};
-
+/**
+ * @brief Communication client for Python simulation subprocess
+ * 
+ * Launches Python simulation as child process and communicates via stdout/stdin.
+ * Receives JSON data lines from Python and emits signals for GUI updates.
+ */
 class CommunicationClient : public QObject
 {
     Q_OBJECT
@@ -38,39 +19,56 @@ public:
     explicit CommunicationClient(QObject *parent = nullptr);
     ~CommunicationClient();
 
-    void start();
+    /**
+     * @brief Start Python simulation subprocess
+     * @param scriptPath Path to simulation_runner.py
+     */
+    void start(const QString& scriptPath);
+
+    /**
+     * @brief Stop Python simulation subprocess
+     */
     void stop();
-    
-    SystemState getLatestState() const;
-    
-    void sendSetpointCommand(double setpoint);
-    void sendStartCommand();
-    void sendStopCommand();
-    void sendResetCommand();
+
+    /**
+     * @brief Send updated PID gains to Python simulation
+     * @param Kp Proportional gain
+     * @param Ki Integral gain
+     * @param Kd Derivative gain
+     */
+    void sendGains(double Kp, double Ki, double Kd);
 
 signals:
-    void stateReceived(const SystemState &state);
-    void connectionStatusChanged(bool connected);
+    /**
+     * @brief Emitted when new simulation data is received
+     * @param pressure Current pressure (bar)
+     * @param valveAngle Valve angle (degrees)
+     * @param motorCurrent Motor current (A)
+     * @param setpoint Pressure setpoint (bar)
+     * @param timestamp Simulation time (s)
+     */
+    void dataUpdated(double pressure, double valveAngle, double motorCurrent, 
+                     double setpoint, double timestamp);
+
+    /**
+     * @brief Emitted when connection error occurs
+     * @param errorMessage Error description
+     */
+    void connectionError(const QString& errorMessage);
 
 private slots:
-    void receiveData();
+    /**
+     * @brief Handle data available from Python stdout
+     */
+    void onReadyRead();
+
+    /**
+     * @brief Handle process errors
+     */
+    void onProcessError(QProcess::ProcessError error);
 
 private:
-    void connectToServer();
-    void disconnectFromServer();
-    
-    zmq::context_t *context;
-    zmq::socket_t *subSocket;   // For receiving state updates
-    zmq::socket_t *reqSocket;   // For sending commands
-    
-    QThread *receiveThread;
-    bool running;
-    
-    SystemState latestState;
-    
-    QString serverAddress;
-    int subPort;
-    int reqPort;
+    QProcess* m_pythonProcess;
 };
 
 #endif // COMMUNICATION_CLIENT_H
