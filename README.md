@@ -47,9 +47,9 @@ graph LR
     G --> B
     F --> H[Output Pressure]
     
-    style A fill:#e1f5ff
-    style B fill:#fff4e1
-    style H fill:#e8f5e9
+    style A fill:#b3d9ff,stroke:#333,stroke-width:2px,color:#000
+    style B fill:#ffe6b3,stroke:#333,stroke-width:2px,color:#000
+    style H fill:#c2f0c2,stroke:#333,stroke-width:2px,color:#000
 ```
 
 ### State-Space Model
@@ -426,9 +426,9 @@ graph TB
     D --> E
     D --> F
     
-    style A fill:#e1f5ff
-    style D fill:#fff4e1
-    style E fill:#e8f5e9
+    style A fill:#b3d9ff,stroke:#333,stroke-width:2px,color:#000
+    style D fill:#ffe6b3,stroke:#333,stroke-width:2px,color:#000
+    style E fill:#c2f0c2,stroke:#333,stroke-width:2px,color:#000
 ```
 
 **Data Point Format (Python → Qt):**
@@ -467,10 +467,10 @@ flowchart LR
     B --> H[Plot Updates]
     B --> I[Dashboard Updates]
     
-    style A fill:#e1f5ff
-    style E fill:#fff4e1
-    style H fill:#e8f5e9
-    style I fill:#e8f5e9
+    style A fill:#b3d9ff,stroke:#333,stroke-width:2px,color:#000
+    style E fill:#ffe6b3,stroke:#333,stroke-width:2px,color:#000
+    style H fill:#c2f0c2,stroke:#333,stroke-width:2px,color:#000
+    style I fill:#c2f0c2,stroke:#333,stroke-width:2px,color:#000
 ```
 
 ### State-Space Implementation
@@ -489,9 +489,9 @@ graph TD
     I -->|No Update| B
     J --> B
     
-    style A fill:#e1f5ff
-    style G fill:#fff4e1
-    style H fill:#e8f5e9
+    style A fill:#b3d9ff,stroke:#333,stroke-width:2px,color:#000
+    style G fill:#ffe6b3,stroke:#333,stroke-width:2px,color:#000
+    style H fill:#c2f0c2,stroke:#333,stroke-width:2px,color:#000
 ```
 
 ---
@@ -664,10 +664,10 @@ graph TD
     D --> D3[Error Handling]
     D --> D4[Plot Scrolling]
     
-    style A fill:#e1f5ff
-    style B fill:#fff4e1
-    style C fill:#fff4e1
-    style D fill:#fff4e1
+    style A fill:#b3d9ff,stroke:#333,stroke-width:2px,color:#000
+    style B fill:#ffe6b3,stroke:#333,stroke-width:2px,color:#000
+    style C fill:#ffe6b3,stroke:#333,stroke-width:2px,color:#000
+    style D fill:#ffe6b3,stroke:#333,stroke-width:2px,color:#000
 ```
 
 ### Contributing
